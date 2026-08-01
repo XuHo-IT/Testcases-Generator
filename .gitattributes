@@ -1,0 +1,14 @@
+# Normalise line endings so Windows and Linux contributors do not fight over
+# whole-file diffs.
+* text=auto eol=lf
+
+# Binary fixtures must never be touched.
+*.png binary
+*.jpg binary
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.ico binary
+
+# Keep generated lockfile diffs out of review noise.
+package-lock.json linguist-generated=true -diff

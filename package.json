@@ -1,7 +1,29 @@
 {
   "name": "testcase-generator",
   "version": "0.1.0",
-  "private": true,
+  "description": "Sinh test case chuẩn ISTQB cho tester từ requirement, user story, tài liệu hoặc API spec — hỗ trợ Claude, GPT, Gemini và Ollama chạy nội bộ.",
+  "license": "MIT",
+  "author": "Ngo Tran Xuan Hoa",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/XuHo-IT/TestcaseGenerator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/XuHo-IT/TestcaseGenerator/issues"
+  },
+  "homepage": "https://github.com/XuHo-IT/TestcaseGenerator#readme",
+  "keywords": [
+    "test-case-generator",
+    "istqb",
+    "qa",
+    "software-testing",
+    "ai",
+    "nextjs",
+    "vercel-ai-sdk"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -21,7 +43,6 @@
     "next": "16.2.12",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-hook-form": "^7.84.0",
     "unpdf": "^1.8.0",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"

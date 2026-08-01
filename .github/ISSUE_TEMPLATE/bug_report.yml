@@ -1,0 +1,64 @@
+name: Báo lỗi
+description: Có gì đó chạy sai
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Cảm ơn bạn đã báo lỗi.
+
+        ⚠️ **Đừng dán API key vào đây.** Nếu lỗi liên quan tới bảo mật, xem [SECURITY.md](../blob/main/SECURITY.md) thay vì mở issue công khai.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Chuyện gì xảy ra
+      description: Bạn mong đợi điều gì, và thực tế nhận được gì?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Các bước tái hiện
+      placeholder: |
+        1. Mở trang ...
+        2. Nhập ...
+        3. Bấm ...
+        4. Thấy lỗi ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Đang dùng model nào
+      description: Nếu tái hiện được với model Mock (offline) thì càng dễ sửa.
+      options:
+        - Mock (offline)
+        - Anthropic Claude
+        - OpenAI GPT
+        - Google Gemini
+        - Ollama (chạy nội bộ)
+        - Không liên quan tới model
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log hoặc thông báo lỗi
+      description: Console trình duyệt hoặc terminal. Nhớ xóa API key trước khi dán.
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: Phiên bản / commit
+      placeholder: "v0.1.0 hoặc mã commit"
+
+  - type: input
+    id: environment
+    attributes:
+      label: Môi trường
+      placeholder: "Windows 11, Node 22, Chrome 130"

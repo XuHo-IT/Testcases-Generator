@@ -1,8 +1,14 @@
 # TestCaseGenerator
 
+[![CI](https://github.com/XuHo-IT/TestcaseGenerator/actions/workflows/ci.yml/badge.svg)](https://github.com/XuHo-IT/TestcaseGenerator/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-1F3B63.svg)](LICENSE)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-1F3B63.svg)](CONTRIBUTING.md)
+
 Sinh test case cho tester từ requirement, kèm **rule validate chuẩn doanh nghiệp (ISTQB)** và **cấu hình được nhiều AI model** (Claude, GPT, Gemini, Ollama local).
 
 Repo này gộp và viết lại hai repo cũ (frontend Next.js và backend .NET) thành một ứng dụng full-stack Next.js duy nhất.
+
+> Dự án mã nguồn mở, hoan nghênh PR. Muốn thử ngay mà không cần API key: đặt `ENABLE_MOCK_PROVIDER=1` rồi chọn model *Mock (offline)*.
 
 ## Tính năng
 
@@ -95,7 +101,7 @@ Rule R5, R6 và R7 có danh sách cụm từ cho cả tiếng Anh và tiếng Vi
 
 | Vấn đề cũ | Xử lý ở repo này |
 |---|---|
-| API key Gemini bị commit công khai | Chỉ commit `.env.example`; `.gitignore` chặn mọi `.env*` khác. **Key cũ `AIzaSy…GAfg` coi như đã lộ — cần revoke trên Google AI Studio** |
+| API key Gemini bị commit công khai | Chỉ commit `.env.example`; `.gitignore` chặn mọi `.env*` khác; key người dùng nằm trong trình duyệt, không đưa lên máy chủ. Key từng bị lộ ở repo cũ cần được thu hồi ở phía Google |
 | Chỉ hỗ trợ Gemini, model dính liền URL | 4 provider + mock, catalog gói trong 1 file, key chỉ ở phía server |
 | Parse JSON bằng cách "cạo" giữa `{...}` | `generateObject` + zod schema — loại bỏ hẳn lớp bug này |
 | Không có validation nào | 14 rule ISTQB + repair pass |
@@ -156,3 +162,17 @@ Toàn bộ token màu nằm ở đầu `app/globals.css` — đổi màu chủ �
 - **Document lớn:** input bị cắt ở 20.000 ký tự kèm cảnh báo rõ ràng — nên chia nhỏ requirement để phủ hết.
 - **PDF scan ảnh:** không trích được text; hệ thống báo lỗi rõ thay vì trả kết quả rỗng.
 - **Chi phí:** mỗi lần generate là 1 lệnh gọi model, cộng tối đa 1 lệnh gọi repair. Dùng mock provider cho demo và CI.
+
+## Đóng góp
+
+Rất hoan nghênh PR — nhất là từ người làm QA: rule kiểm tra còn thiếu, định dạng export mà công ty bạn đang dùng, hay prompt cho ra test case tốt hơn.
+
+Đọc [CONTRIBUTING.md](CONTRIBUTING.md) để biết cách chạy dự án và hướng dẫn cụ thể cho từng loại đóng góp (thêm model, thêm rule, thêm định dạng export). Không cần API key để phát triển — mock provider chạy offline hoàn toàn.
+
+Trước khi mở PR, chạy `npm run lint && npm test && npm run build`. CI chạy đúng ba lệnh này trên Node 20 và 22.
+
+Tham gia dự án đồng nghĩa với việc bạn đồng ý tuân thủ [Quy tắc ứng xử](CODE_OF_CONDUCT.md). Lỗi bảo mật xin báo riêng theo [SECURITY.md](SECURITY.md), đừng mở issue công khai.
+
+## Giấy phép
+
+[MIT](LICENSE) © Ngo Tran Xuan Hoa
