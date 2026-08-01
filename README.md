@@ -1,8 +1,8 @@
-# TestcaseForge
+# TestCaseGenerator
 
 Sinh test case cho tester từ requirement, kèm **rule validate chuẩn doanh nghiệp (ISTQB)** và **cấu hình được nhiều AI model** (Claude, GPT, Gemini, Ollama local).
 
-Repo này gộp và viết lại hai repo cũ (`TestCaseGenerator` — frontend Next.js, và `TestCasseGenerator_API` — backend .NET) thành một ứng dụng full-stack Next.js duy nhất.
+Repo này gộp và viết lại hai repo cũ (frontend Next.js và backend .NET) thành một ứng dụng full-stack Next.js duy nhất.
 
 ## Tính năng
 
@@ -26,7 +26,7 @@ npm run dev                    # http://localhost:3000
 Muốn thử ngay mà không tốn credit: đặt `ENABLE_MOCK_PROVIDER=1` rồi chọn model **Mock (fixtures, offline)** — toàn bộ luồng generate → validate → repair → export chạy offline.
 
 ```bash
-npm test          # 81 unit test, không gọi API thật
+npm test          # 85 unit test, không gọi API thật
 npm run build     # kiểm tra type + build production
 ```
 
@@ -87,7 +87,7 @@ Rule R5, R6 và R7 có danh sách cụm từ cho cả tiếng Anh và tiếng Vi
 | Marker ● chỉ đánh được UTCID01 và UTCID02 | Mỗi test case một cột, marker đánh đủ mọi cột |
 | Số test case = số input field | Số case theo số giá trị biên thực tế |
 | min/max kiểu `int` làm hỏng field string | BVA theo từng kiểu: int, decimal, string (theo độ dài), date, enum, bool |
-| Test suite không build được | 81 test chạy sạch với mock provider |
+| Test suite không build được | 85 test chạy sạch với mock provider |
 | Chỉ export được Excel | 6 định dạng, cộng Use Case Report |
 
 ## Triển khai
@@ -117,8 +117,19 @@ lib/
   validation/  engine.ts · rules.ts · vague-phrases.ts
   export/      excel-istqb · excel-utcid · excel-usecase · text-formats · index.ts
 components/    GeneratorForm · ModelPicker · TestCasePreviewTable · ValidationBadge · ExportMenu
-tests/         81 unit test (validation, BVA, export, inputs, pipeline)
+tests/         85 unit test (validation, BVA, export, inputs, pipeline)
 ```
+
+## Giao diện
+
+Bảng màu học thuật, một màu nhấn duy nhất là **navy đậm (`#1F3B63`)** trên nền bone ấm (`#F7F6F3`) — dễ đọc khi ngồi review lâu, không gradient, không màu chói. Có dark mode tự động theo hệ điều hành.
+
+- Chữ hiển thị: **Lora** (serif) cho tiêu đề, **Be Vietnam Pro** cho nội dung — hỗ trợ đầy đủ dấu tiếng Việt.
+- Số liệu và mã test case dùng font monospace, bật `tabular-nums` để các cột thẳng hàng.
+- Đủ trạng thái: hover, active, focus ring cho bàn phím, skeleton khi đang sinh, và màn hình rỗng có hướng dẫn.
+- Tôn trọng `prefers-reduced-motion`; có link "bỏ qua đến nội dung chính" cho người dùng bàn phím.
+
+Toàn bộ token màu nằm ở đầu `app/globals.css` — đổi màu chủ đạo của trường chỉ cần sửa biến `--accent`.
 
 ## Lưu ý khi vận hành
 

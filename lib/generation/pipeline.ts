@@ -26,7 +26,7 @@ import { buildRepairPrompt } from "@/lib/prompts/repair";
 import { buildUseCaseReportPrompt } from "@/lib/prompts/use-case-report";
 import { PROMPT_VERSION } from "@/lib/prompts/fragments";
 import { validateSuite, invalidCaseIds } from "@/lib/validation/engine";
-import { synthesizeBvaCases } from "./bva";
+import { detectLanguage, synthesizeBvaCases } from "./bva";
 
 /**
  * Generation pipeline:
@@ -57,7 +57,15 @@ export async function generateTestSuite(request: GenerateRequest): Promise<Gener
   let suite = assembleSuite(object, normalized, request);
 
   if (request.options.includeBva) {
-    const bvaCases = synthesizeBvaCases(suite, suite.testCases.length + 1);
+    // Deterministic cases have to read in the same language as the AI-written
+    // ones; on "auto" that is only knowable from what the model produced.
+    const lang =
+      request.options.language === "auto"
+        ? detectLanguage(
+            [suite.requirement.title, suite.requirement.description, suite.testCases[0]?.title ?? ""].join(" ")
+          )
+        : request.options.language;
+    const bvaCases = synthesizeBvaCases(suite, suite.testCases.length + 1, lang);
     suite = { ...suite, testCases: [...suite.testCases, ...bvaCases] };
   }
 

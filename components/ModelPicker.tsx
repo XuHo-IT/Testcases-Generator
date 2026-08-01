@@ -34,31 +34,50 @@ export function ModelPicker({ value, onChange }: Props) {
         setGroups(data.providers);
         if (!value) {
           const firstAvailable = data.providers.find((g) => g.available && g.models.length > 0);
-          const model =
-            firstAvailable?.models.find((m) => m.recommended) ?? firstAvailable?.models[0];
+          const model = firstAvailable?.models.find((m) => m.recommended) ?? firstAvailable?.models[0];
           if (firstAvailable && model) {
             onChange({ providerId: firstAvailable.providerId, modelId: model.modelId });
           }
         }
       })
-      .catch(() => !cancelled && setError("Could not load the model list"));
+      .catch(() => !cancelled && setError("Không tải được danh sách model"));
     return () => {
       cancelled = true;
     };
-    // Intentionally run once — the catalog is static per deployment.
+    // Chạy một lần — catalog cố định theo deployment.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (error) return <p className="text-sm text-red-600">{error}</p>;
-  if (!groups) return <p className="text-sm opacity-60">Loading models…</p>;
+  if (error) {
+    return (
+      <div>
+        <span className="label">Model AI</span>
+        <p className="text-xs text-danger">{error}</p>
+      </div>
+    );
+  }
+
+  if (!groups) {
+    return (
+      <div>
+        <span className="label">Model AI</span>
+        <div className="skeleton h-[38px] w-full" aria-hidden />
+        <p className="hint mt-1.5">Đang tải danh sách model…</p>
+      </div>
+    );
+  }
 
   const anyAvailable = groups.some((g) => g.available && g.models.length > 0);
   const selectValue = value ? `${value.providerId}::${value.modelId}` : "";
+  const unavailable = groups.filter((g) => !g.available && g.reason);
+  const activeNotes = groups
+    .flatMap((g) => g.models)
+    .find((m) => m.providerId === value?.providerId && m.modelId === value?.modelId)?.notes;
 
   return (
-    <div className="space-y-1">
-      <label htmlFor="model" className="block text-sm font-medium">
-        AI model
+    <div>
+      <label htmlFor="model" className="label">
+        Model AI
       </label>
       <select
         id="model"
@@ -67,13 +86,13 @@ export function ModelPicker({ value, onChange }: Props) {
           const [providerId, modelId] = e.target.value.split("::");
           onChange({ providerId, modelId });
         }}
-        className="w-full rounded-md border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+        className="field"
       >
-        {!anyAvailable && <option value="">No provider configured</option>}
+        {!anyAvailable && <option value="">Chưa cấu hình provider nào</option>}
         {groups.map((group) => (
           <optgroup
             key={group.providerId}
-            label={group.available ? group.label : `${group.label} — unavailable`}
+            label={group.available ? group.label : `${group.label} — chưa sẵn sàng`}
           >
             {group.models.map((model) => (
               <option
@@ -82,27 +101,29 @@ export function ModelPicker({ value, onChange }: Props) {
                 disabled={!group.available}
               >
                 {model.label}
-                {model.recommended ? " ★" : ""}
+                {model.recommended ? " · khuyến nghị" : ""}
               </option>
             ))}
           </optgroup>
         ))}
       </select>
 
-      {groups
-        .filter((g) => !g.available && g.reason)
-        .map((g) => (
-          <p key={g.providerId} className="text-xs opacity-60">
-            {g.label}: {g.reason}
-          </p>
-        ))}
+      {activeNotes && <p className="hint mt-1.5">{activeNotes}</p>}
 
-      {(() => {
-        const notes = groups
-          .flatMap((g) => g.models)
-          .find((m) => m.providerId === value?.providerId && m.modelId === value?.modelId)?.notes;
-        return notes ? <p className="text-xs opacity-70">{notes}</p> : null;
-      })()}
+      {unavailable.length > 0 && (
+        <details className="mt-2">
+          <summary className="cursor-pointer text-xs text-muted transition-colors hover:text-ink">
+            {unavailable.length} provider chưa sẵn sàng
+          </summary>
+          <ul className="mt-1.5 space-y-1">
+            {unavailable.map((g) => (
+              <li key={g.providerId} className="hint">
+                <span className="text-ink">{g.label}:</span> {g.reason}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   );
 }

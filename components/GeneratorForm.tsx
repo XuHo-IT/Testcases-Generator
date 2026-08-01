@@ -10,17 +10,14 @@ import { ExportMenu } from "./ExportMenu";
 
 type TabId = GenerateInput["sourceType"];
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: "freeText", label: "Use case text" },
-  { id: "userStory", label: "User story + AC" },
-  { id: "document", label: "Requirement file" },
-  { id: "apiSpec", label: "API spec" },
+const TABS: { id: TabId; label: string; hint: string }[] = [
+  { id: "freeText", label: "Mô tả use case", hint: "Gõ tên use case và ngữ cảnh" },
+  { id: "userStory", label: "User story", hint: "Story + acceptance criteria kiểu Jira" },
+  { id: "document", label: "Tài liệu", hint: "Upload .docx, .pdf, .md, .txt" },
+  { id: "apiSpec", label: "API spec", hint: "OpenAPI / Swagger, JSON hoặc YAML" },
 ];
 
-const EXAMPLES = ["User Login", "Age Validation", "Payment Processing", "Email Validation", "Password Strength Check"];
-
-const inputClass =
-  "w-full rounded-md border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20";
+const EXAMPLES = ["Đăng nhập người dùng", "Kiểm tra độ tuổi", "Xử lý thanh toán", "Kiểm tra email"];
 
 export function GeneratorForm() {
   const [tab, setTab] = useState<TabId>("freeText");
@@ -28,7 +25,7 @@ export function GeneratorForm() {
   const [language, setLanguage] = useState<Language>("auto");
   const [includeBva, setIncludeBva] = useState(true);
 
-  // Per-tab state
+  // State theo từng tab
   const [useCaseName, setUseCaseName] = useState("");
   const [additionalContext, setAdditionalContext] = useState("");
   const [story, setStory] = useState("");
@@ -39,19 +36,20 @@ export function GeneratorForm() {
 
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [result, setResult] = useState<{ suite: TestSuite; validation: ValidationReport } | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function uploadFile(file: File, target: "document" | "apiSpec") {
     setError(null);
-    setStatus(`Reading ${file.name}…`);
+    setStatus(`Đang đọc ${file.name}…`);
     try {
       const form = new FormData();
       form.append("file", file);
       const res = await fetch("/api/parse-file", { method: "POST", body: form });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not read the file");
+      if (!res.ok) throw new Error(data.error ?? "Không đọc được file");
       if (target === "document") {
         setDocText(data.text);
         setDocName(data.fileName);
@@ -62,7 +60,7 @@ export function GeneratorForm() {
       setStatus(null);
     } catch (e) {
       setStatus(null);
-      setError(e instanceof Error ? e.message : "Could not read the file");
+      setError(e instanceof Error ? e.message : "Không đọc được file");
     }
   }
 
@@ -90,19 +88,20 @@ export function GeneratorForm() {
   async function generate() {
     const input = buildInput();
     if (!input) {
-      setError("Fill in the input for the selected tab first.");
+      setFieldError(`Nhập nội dung cho tab "${TABS.find((t) => t.id === tab)!.label}" trước đã.`);
       return;
     }
     if (!model) {
-      setError("Select an AI model first.");
+      setFieldError("Chọn một model AI trước đã.");
       return;
     }
 
+    setFieldError(null);
     setBusy(true);
     setError(null);
     setResult(null);
     setWarnings([]);
-    setStatus("Generating test cases… this can take 30-90 seconds.");
+    setStatus("Đang sinh test case — thường mất 30–90 giây.");
 
     try {
       const res = await fetch("/api/generate", {
@@ -116,245 +115,303 @@ export function GeneratorForm() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.details?.join("; ") ?? data.error ?? "Generation failed");
+      if (!res.ok) throw new Error(data.details?.join("; ") ?? data.error ?? "Sinh test case thất bại");
       setResult({ suite: data.suite, validation: data.validation });
       setWarnings(data.warnings ?? []);
       setStatus(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Generation failed");
+      setError(e instanceof Error ? e.message : "Sinh test case thất bại");
       setStatus(null);
     } finally {
       setBusy(false);
     }
   }
 
+  const activeTab = TABS.find((t) => t.id === tab)!;
+
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border border-black/10 p-4 dark:border-white/15">
-        <div className="mb-4 flex flex-wrap gap-1 border-b border-black/10 dark:border-white/15">
+      <div className="card overflow-hidden">
+        <nav
+          aria-label="Loại đầu vào"
+          className="flex flex-wrap gap-x-1 border-b border-line bg-sunken px-2 pt-2"
+        >
           {TABS.map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
-              className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+              aria-current={tab === t.id ? "page" : undefined}
+              className={`-mb-px rounded-t border border-b-0 px-3.5 py-2 text-sm transition-colors ${
                 tab === t.id
-                  ? "border-foreground font-medium"
-                  : "border-transparent opacity-60 hover:opacity-100"
+                  ? "border-line bg-surface font-medium text-accent"
+                  : "border-transparent text-muted hover:text-ink"
               }`}
             >
               {t.label}
             </button>
           ))}
+        </nav>
+
+        <div className="p-5">
+          <p className="hint mb-4">{activeTab.hint}</p>
+
+          {tab === "freeText" && (
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="ucName" className="label">
+                  Tên use case <span className="text-danger">*</span>
+                </label>
+                <input
+                  id="ucName"
+                  value={useCaseName}
+                  onChange={(e) => setUseCaseName(e.target.value)}
+                  placeholder="ví dụ: Đăng nhập người dùng"
+                  className="field"
+                />
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {EXAMPLES.map((ex) => (
+                    <button key={ex} type="button" onClick={() => setUseCaseName(ex)} className="chip">
+                      {ex}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label htmlFor="ucContext" className="label">
+                  Ngữ cảnh bổ sung
+                </label>
+                <textarea
+                  id="ucContext"
+                  value={additionalContext}
+                  onChange={(e) => setAdditionalContext(e.target.value)}
+                  rows={4}
+                  placeholder="Business rule, ràng buộc field, các trường hợp biên cần lưu ý…"
+                  className="field"
+                />
+              </div>
+            </div>
+          )}
+
+          {tab === "userStory" && (
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="story" className="label">
+                  User story <span className="text-danger">*</span>
+                </label>
+                <textarea
+                  id="story"
+                  value={story}
+                  onChange={(e) => setStory(e.target.value)}
+                  rows={4}
+                  placeholder="Là người dùng đã đăng ký, tôi muốn đặt lại mật khẩu để lấy lại quyền truy cập tài khoản."
+                  className="field"
+                />
+              </div>
+              <div>
+                <label htmlFor="ac" className="label">
+                  Acceptance criteria — mỗi dòng một tiêu chí
+                </label>
+                <textarea
+                  id="ac"
+                  value={criteria}
+                  onChange={(e) => setCriteria(e.target.value)}
+                  rows={5}
+                  placeholder={"Link đặt lại mật khẩu hết hạn sau 30 phút\nMật khẩu dài 8–64 ký tự\nNgười dùng nhận được email thông báo"}
+                  className="field"
+                />
+                <p className="hint mt-1.5">
+                  Mỗi dòng thành AC-1, AC-2… và được rule R13 kiểm tra xem đã có test case phủ chưa.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {tab === "document" && (
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="docFile" className="label">
+                  Upload tài liệu requirement
+                </label>
+                <input
+                  id="docFile"
+                  type="file"
+                  accept=".docx,.pdf,.md,.txt"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadFile(file, "document");
+                  }}
+                  className="field cursor-pointer file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-sunken file:px-3 file:py-1 file:text-sm file:text-ink"
+                />
+                {docName && <p className="hint mt-1.5">Đã đọc: {docName}</p>}
+              </div>
+              <div>
+                <label htmlFor="docText" className="label">
+                  Nội dung requirement <span className="text-danger">*</span>
+                </label>
+                <textarea
+                  id="docText"
+                  value={docText}
+                  onChange={(e) => setDocText(e.target.value)}
+                  rows={10}
+                  placeholder="Upload file ở trên, hoặc dán trực tiếp nội dung requirement vào đây."
+                  className="field font-mono text-xs"
+                />
+              </div>
+            </div>
+          )}
+
+          {tab === "apiSpec" && (
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="specFile" className="label">
+                  Upload OpenAPI / Swagger spec
+                </label>
+                <input
+                  id="specFile"
+                  type="file"
+                  accept=".json,.yaml,.yml"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadFile(file, "apiSpec");
+                  }}
+                  className="field cursor-pointer file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-sunken file:px-3 file:py-1 file:text-sm file:text-ink"
+                />
+              </div>
+              <div>
+                <label htmlFor="specText" className="label">
+                  Nội dung spec <span className="text-danger">*</span>
+                </label>
+                <textarea
+                  id="specText"
+                  value={specText}
+                  onChange={(e) => setSpecText(e.target.value)}
+                  rows={10}
+                  placeholder="Dán tài liệu OpenAPI 3 hoặc Swagger 2 (JSON hoặc YAML)."
+                  className="field font-mono text-xs"
+                />
+                <p className="hint mt-1.5">
+                  Ràng buộc trong schema (minimum, maximum, maxLength, enum) được đưa thẳng vào phân tích
+                  giá trị biên.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
-
-        {tab === "freeText" && (
-          <div className="space-y-3">
-            <div>
-              <label htmlFor="ucName" className="mb-1 block text-sm font-medium">
-                Use case name <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="ucName"
-                value={useCaseName}
-                onChange={(e) => setUseCaseName(e.target.value)}
-                placeholder="e.g. User Login"
-                className={inputClass}
-              />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {EXAMPLES.map((ex) => (
-                <button
-                  key={ex}
-                  type="button"
-                  onClick={() => setUseCaseName(ex)}
-                  className="rounded-full border border-black/15 px-3 py-1 text-xs hover:bg-black/5 dark:border-white/20 dark:hover:bg-white/10"
-                >
-                  {ex}
-                </button>
-              ))}
-            </div>
-            <div>
-              <label htmlFor="ucContext" className="mb-1 block text-sm font-medium">
-                Additional context
-              </label>
-              <textarea
-                id="ucContext"
-                value={additionalContext}
-                onChange={(e) => setAdditionalContext(e.target.value)}
-                rows={4}
-                placeholder="Business rules, field constraints, edge cases the model should know about…"
-                className={inputClass}
-              />
-            </div>
-          </div>
-        )}
-
-        {tab === "userStory" && (
-          <div className="space-y-3">
-            <div>
-              <label htmlFor="story" className="mb-1 block text-sm font-medium">
-                User story <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                id="story"
-                value={story}
-                onChange={(e) => setStory(e.target.value)}
-                rows={4}
-                placeholder="As a registered user, I want to reset my password so that I can regain access to my account."
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label htmlFor="ac" className="mb-1 block text-sm font-medium">
-                Acceptance criteria — one per line
-              </label>
-              <textarea
-                id="ac"
-                value={criteria}
-                onChange={(e) => setCriteria(e.target.value)}
-                rows={5}
-                placeholder={"Reset link expires after 30 minutes\nPassword must be 8-64 characters\nUser is notified by email"}
-                className={inputClass}
-              />
-              <p className="mt-1 text-xs opacity-60">
-                Each line becomes AC-1, AC-2… and every criterion is checked for test coverage (rule R13).
-              </p>
-            </div>
-          </div>
-        )}
-
-        {tab === "document" && (
-          <div className="space-y-3">
-            <div>
-              <label htmlFor="docFile" className="mb-1 block text-sm font-medium">
-                Upload requirement file (.docx, .pdf, .md, .txt)
-              </label>
-              <input
-                id="docFile"
-                type="file"
-                accept=".docx,.pdf,.md,.txt"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) uploadFile(file, "document");
-                }}
-                className="block w-full text-sm file:mr-3 file:rounded-md file:border file:border-black/15 file:bg-transparent file:px-3 file:py-1.5 file:text-sm dark:file:border-white/20"
-              />
-            </div>
-            <div>
-              <label htmlFor="docText" className="mb-1 block text-sm font-medium">
-                Requirement text <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                id="docText"
-                value={docText}
-                onChange={(e) => setDocText(e.target.value)}
-                rows={10}
-                placeholder="Upload a file above, or paste the requirement text here."
-                className={`${inputClass} font-mono text-xs`}
-              />
-            </div>
-          </div>
-        )}
-
-        {tab === "apiSpec" && (
-          <div className="space-y-3">
-            <div>
-              <label htmlFor="specFile" className="mb-1 block text-sm font-medium">
-                Upload OpenAPI/Swagger spec (.json, .yaml, .yml)
-              </label>
-              <input
-                id="specFile"
-                type="file"
-                accept=".json,.yaml,.yml"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) uploadFile(file, "apiSpec");
-                }}
-                className="block w-full text-sm file:mr-3 file:rounded-md file:border file:border-black/15 file:bg-transparent file:px-3 file:py-1.5 file:text-sm dark:file:border-white/20"
-              />
-            </div>
-            <div>
-              <label htmlFor="specText" className="mb-1 block text-sm font-medium">
-                Spec content <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                id="specText"
-                value={specText}
-                onChange={(e) => setSpecText(e.target.value)}
-                rows={10}
-                placeholder="Paste an OpenAPI 3 / Swagger 2 document (JSON or YAML)."
-                className={`${inputClass} font-mono text-xs`}
-              />
-              <p className="mt-1 text-xs opacity-60">
-                Schema constraints (minimum, maximum, maxLength, enum) are carried into boundary value analysis.
-              </p>
-            </div>
-          </div>
-        )}
       </div>
 
-      <div className="grid gap-4 rounded-lg border border-black/10 p-4 sm:grid-cols-3 dark:border-white/15">
+      <div className="card grid gap-5 p-5 sm:grid-cols-3">
         <ModelPicker value={model} onChange={setModel} />
 
-        <div className="space-y-1">
-          <label htmlFor="lang" className="block text-sm font-medium">
-            Output language
+        <div>
+          <label htmlFor="lang" className="label">
+            Ngôn ngữ đầu ra
           </label>
           <select
             id="lang"
             value={language}
             onChange={(e) => setLanguage(e.target.value as Language)}
-            className={inputClass}
+            className="field"
           >
-            <option value="auto">Auto (match the requirement)</option>
-            <option value="en">English</option>
+            <option value="auto">Tự động theo requirement</option>
             <option value="vi">Tiếng Việt</option>
+            <option value="en">English</option>
           </select>
         </div>
 
-        <div className="space-y-1">
-          <span className="block text-sm font-medium">Options</span>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={includeBva} onChange={(e) => setIncludeBva(e.target.checked)} />
-            Add boundary value cases
+        <div>
+          <span className="label">Tùy chọn</span>
+          <label className="flex cursor-pointer items-start gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={includeBva}
+              onChange={(e) => setIncludeBva(e.target.checked)}
+              className="mt-0.5 accent-[var(--accent)]"
+            />
+            <span>
+              Thêm test case giá trị biên
+              <span className="hint mt-0.5 block">
+                Sinh tất định min, max, min−1, max+1 cho mỗi field có ràng buộc.
+              </span>
+            </span>
           </label>
-          <p className="text-xs opacity-60">Deterministic min / max / min-1 / max+1 coverage per bounded field.</p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={generate}
-          disabled={busy}
-          className="rounded-md bg-foreground px-5 py-2.5 text-sm font-medium text-background disabled:opacity-50"
-        >
-          {busy ? "Generating…" : "Generate test cases"}
+      <div className="flex flex-wrap items-center gap-4">
+        <button type="button" onClick={generate} disabled={busy} className="btn btn-primary">
+          {busy ? "Đang sinh test case…" : "Sinh test case"}
         </button>
-        {status && <span className="text-sm opacity-70">{status}</span>}
+        {status && <span className="text-sm text-muted">{status}</span>}
+        {fieldError && !status && <span className="text-sm text-danger">{fieldError}</span>}
       </div>
 
       {error && (
-        <p className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">
-          {error}
-        </p>
+        <div className="card border-l-2 border-l-danger p-4">
+          <h3 className="text-sm font-medium text-danger">Không sinh được test case</h3>
+          <p className="mt-1 text-sm text-muted">{error}</p>
+        </div>
       )}
 
       {warnings.length > 0 && (
-        <ul className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
-          {warnings.map((w, i) => (
-            <li key={i}>{w}</li>
-          ))}
-        </ul>
+        <div className="card border-l-2 border-l-warn p-4">
+          <h3 className="text-sm font-medium text-ink">Lưu ý</h3>
+          <ul className="mt-1 space-y-1">
+            {warnings.map((w, i) => (
+              <li key={i} className="text-sm text-muted">
+                {w}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
+      {busy && <GeneratingSkeleton />}
+
+      {!busy && !result && !error && <EmptyState />}
+
       {result && (
-        <div className="space-y-5">
+        <div className="space-y-8">
           <TestCasePreviewTable suite={result.suite} validation={result.validation} />
           <ExportMenu suite={result.suite} validation={result.validation} />
         </div>
       )}
+    </div>
+  );
+}
+
+function GeneratingSkeleton() {
+  return (
+    <div className="space-y-4" aria-hidden>
+      <div className="card grid grid-cols-2 divide-x divide-y divide-line sm:grid-cols-4 sm:divide-y-0">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="px-4 py-3">
+            <div className="skeleton h-5 w-10" />
+            <div className="skeleton mt-2 h-3 w-20" />
+          </div>
+        ))}
+      </div>
+      <div className="card divide-y divide-line">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 px-4 py-3.5">
+            <div className="skeleton h-3 w-16 shrink-0" />
+            <div className="skeleton h-3 flex-1" style={{ maxWidth: `${70 - i * 8}%` }} />
+            <div className="skeleton h-4 w-14 shrink-0" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="card px-6 py-12 text-center">
+      <h3 className="font-display text-xl tracking-tight text-ink">Chưa có test case nào</h3>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
+        Chọn loại đầu vào ở trên, nhập requirement rồi bấm <span className="text-ink">Sinh test case</span>.
+        Kết quả hiện ngay tại đây kèm kết quả kiểm tra từng rule trước khi bạn xuất file.
+      </p>
     </div>
   );
 }

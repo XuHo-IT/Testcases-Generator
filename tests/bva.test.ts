@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bvaValuesForField, synthesizeBvaCases } from "@/lib/generation/bva";
+import { bvaValuesForField, detectLanguage, synthesizeBvaCases } from "@/lib/generation/bva";
 import type { InputField } from "@/lib/schemas/test-case";
 import { makeSuite } from "./helpers";
 
@@ -55,6 +55,17 @@ describe("bvaValuesForField", () => {
   });
 });
 
+describe("detectLanguage", () => {
+  it("recognises Vietnamese diacritics", () => {
+    expect(detectLanguage("Đăng nhập người dùng")).toBe("vi");
+    expect(detectLanguage("Kiểm tra độ tuổi")).toBe("vi");
+  });
+
+  it("falls back to English for plain ASCII", () => {
+    expect(detectLanguage("User login with email and password")).toBe("en");
+  });
+});
+
 describe("synthesizeBvaCases", () => {
   const suite = makeSuite({
     fields: [field({ name: "age", dataType: "int", min: 10, max: 18 })],
@@ -93,6 +104,24 @@ describe("synthesizeBvaCases", () => {
     }
     // The full value still has to reach the tester via the data table.
     expect(cases.some((tc) => tc.testData[0].value.length === 255)).toBe(true);
+  });
+
+  it("writes case text in Vietnamese when asked", () => {
+    const cases = synthesizeBvaCases(suite, 1, "vi");
+    expect(cases.length).toBeGreaterThan(0);
+    for (const tc of cases) {
+      expect(tc.title.startsWith("Biên:")).toBe(true);
+      expect(tc.objective).toContain("Phân tích giá trị biên");
+      expect(tc.steps[0].action).toContain("Đặt mọi input");
+      expect(tc.expectedResult).toMatch(/Giá trị (bị từ chối|được chấp nhận)/);
+    }
+    // No English boilerplate should leak through.
+    const allText = cases.map((c) => `${c.title} ${c.objective} ${c.expectedResult}`).join(" ");
+    expect(allText).not.toMatch(/\b(boundary|value is (rejected|accepted)|Enter|Submit)\b/);
+  });
+
+  it("defaults to English so existing callers are unaffected", () => {
+    expect(synthesizeBvaCases(suite, 1)[0].title.startsWith("BVA:")).toBe(true);
   });
 
   it("skips values already covered by existing cases", () => {

@@ -10,12 +10,137 @@ import type { CaseType, InputField, TestCase, TestSuite } from "@/lib/schemas/te
  * fabricated.
  */
 
+/** Language the generated case text is written in. */
+export type BvaLanguage = "en" | "vi";
+
 export interface BvaValue {
   /** Value serialized as a string, ready for the testData table. */
   value: string;
-  /** Human label, e.g. "minimum boundary". */
-  label: string;
+  /** Label key resolved through COPY, e.g. "min". */
+  labelKey: LabelKey;
+  /** Interpolation argument for labels that mention a bound. */
+  labelArg?: string | number;
   kind: CaseType;
+}
+
+type LabelKey =
+  | "min"
+  | "max"
+  | "belowMin"
+  | "aboveMax"
+  | "mid"
+  | "emptyRequired"
+  | "minLength"
+  | "belowMinLength"
+  | "maxLength"
+  | "aboveMaxLength"
+  | "singleChar"
+  | "earliestDate"
+  | "latestDate"
+  | "beforeEarliest"
+  | "afterLatest"
+  | "allowedValue"
+  | "outsideAllowed"
+  | "boolTrue"
+  | "boolFalse";
+
+/**
+ * All generated prose lives here so deterministic cases match the language the
+ * AI-generated cases were written in.
+ */
+const COPY: Record<BvaLanguage, {
+  labels: Record<LabelKey, (arg?: string | number) => string>;
+  title: (field: string, value: string, label: string) => string;
+  objective: (field: string) => string;
+  precondition: (fn: string) => string;
+  stepOthersValid: (field: string) => string;
+  stepEnter: (field: string, value: string) => string;
+  stepSubmit: (fn: string) => string;
+  expectedInvalid: (field: string) => string;
+  expectedValid: (field: string) => string;
+  empty: string;
+  charsSuffix: (n: number) => string;
+}> = {
+  en: {
+    labels: {
+      min: () => "minimum boundary",
+      max: () => "maximum boundary",
+      belowMin: () => "just below minimum (invalid)",
+      aboveMax: () => "just above maximum (invalid)",
+      mid: () => "mid-range value",
+      emptyRequired: () => "empty value (invalid for required field)",
+      minLength: (n) => `minimum length (${n})`,
+      belowMinLength: (n) => `below minimum length (${n}, invalid)`,
+      maxLength: (n) => `maximum length (${n})`,
+      aboveMaxLength: (n) => `above maximum length (${n}, invalid)`,
+      singleChar: () => "single character",
+      earliestDate: () => "earliest allowed date",
+      latestDate: () => "latest allowed date",
+      beforeEarliest: () => "one day before earliest (invalid)",
+      afterLatest: () => "one day after latest (invalid)",
+      allowedValue: (v) => `allowed value "${v}"`,
+      outsideAllowed: () => "value outside the allowed set (invalid)",
+      boolTrue: () => "true",
+      boolFalse: () => "false",
+    },
+    title: (field, value, label) => `BVA: ${field} = ${value} (${label})`,
+    objective: (field) => `Boundary value analysis for field "${field}"`,
+    precondition: (fn) =>
+      `${fn} is reachable and all other inputs are set to known valid values`,
+    stepOthersValid: (field) => `Set every input except "${field}" to a known valid value`,
+    stepEnter: (field, value) => `Enter "${value}" into the "${field}" field`,
+    stepSubmit: (fn) => `Submit the input to ${fn}`,
+    expectedInvalid: (field) =>
+      `The value is rejected: a validation error message for "${field}" is displayed and processing does not continue`,
+    expectedValid: (field) =>
+      `The value is accepted: no validation error is displayed for "${field}" and processing continues normally`,
+    empty: "(empty)",
+    charsSuffix: (n) => `${n} characters`,
+  },
+  vi: {
+    labels: {
+      min: () => "giá trị biên nhỏ nhất",
+      max: () => "giá trị biên lớn nhất",
+      belowMin: () => "nhỏ hơn giá trị nhỏ nhất 1 đơn vị (không hợp lệ)",
+      aboveMax: () => "lớn hơn giá trị lớn nhất 1 đơn vị (không hợp lệ)",
+      mid: () => "giá trị giữa khoảng",
+      emptyRequired: () => "để trống (không hợp lệ với field bắt buộc)",
+      minLength: (n) => `độ dài nhỏ nhất (${n} ký tự)`,
+      belowMinLength: (n) => `ngắn hơn độ dài nhỏ nhất (${n} ký tự, không hợp lệ)`,
+      maxLength: (n) => `độ dài lớn nhất (${n} ký tự)`,
+      aboveMaxLength: (n) => `vượt độ dài lớn nhất (${n} ký tự, không hợp lệ)`,
+      singleChar: () => "một ký tự",
+      earliestDate: () => "ngày sớm nhất được phép",
+      latestDate: () => "ngày muộn nhất được phép",
+      beforeEarliest: () => "trước ngày sớm nhất 1 ngày (không hợp lệ)",
+      afterLatest: () => "sau ngày muộn nhất 1 ngày (không hợp lệ)",
+      allowedValue: (v) => `giá trị hợp lệ "${v}"`,
+      outsideAllowed: () => "giá trị ngoài danh sách cho phép (không hợp lệ)",
+      boolTrue: () => "true",
+      boolFalse: () => "false",
+    },
+    title: (field, value, label) => `Biên: ${field} = ${value} (${label})`,
+    objective: (field) => `Phân tích giá trị biên cho field "${field}"`,
+    precondition: (fn) =>
+      `Chức năng ${fn} truy cập được và mọi input khác đã đặt giá trị hợp lệ đã biết`,
+    stepOthersValid: (field) => `Đặt mọi input trừ "${field}" về giá trị hợp lệ đã biết`,
+    stepEnter: (field, value) => `Nhập "${value}" vào field "${field}"`,
+    stepSubmit: (fn) => `Gửi dữ liệu tới chức năng ${fn}`,
+    expectedInvalid: (field) =>
+      `Giá trị bị từ chối: hiển thị thông báo lỗi kiểm tra dữ liệu cho field "${field}" và không xử lý tiếp`,
+    expectedValid: (field) =>
+      `Giá trị được chấp nhận: không hiển thị lỗi kiểm tra dữ liệu cho field "${field}" và tiếp tục xử lý bình thường`,
+    empty: "(rỗng)",
+    charsSuffix: (n) => `${n} ký tự`,
+  },
+};
+
+/** Vietnamese-specific letters — enough to tell the two languages apart. */
+const VIETNAMESE_PATTERN =
+  /[ăâđêôơưĂÂĐÊÔƠƯáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/;
+
+export function detectLanguage(text: string): BvaLanguage {
+  return VIETNAMESE_PATTERN.test(text) ? "vi" : "en";
 }
 
 export function bvaValuesForField(field: InputField): BvaValue[] {
@@ -29,13 +154,13 @@ export function bvaValuesForField(field: InputField): BvaValue[] {
       const fmt = (n: number) => (isInt ? String(Math.round(n)) : String(Number(n.toFixed(2))));
       const step = isInt ? 1 : 0.01;
       const values: BvaValue[] = [
-        { value: fmt(min), label: "minimum boundary", kind: "boundary" },
-        { value: fmt(max), label: "maximum boundary", kind: "boundary" },
-        { value: fmt(min - step), label: "just below minimum (invalid)", kind: "negative" },
-        { value: fmt(max + step), label: "just above maximum (invalid)", kind: "negative" },
+        { value: fmt(min), labelKey: "min", kind: "boundary" },
+        { value: fmt(max), labelKey: "max", kind: "boundary" },
+        { value: fmt(min - step), labelKey: "belowMin", kind: "negative" },
+        { value: fmt(max + step), labelKey: "aboveMax", kind: "negative" },
       ];
       if (max - min > step) {
-        values.push({ value: fmt(min + (max - min) / 2), label: "mid-range value", kind: "positive" });
+        values.push({ value: fmt(min + (max - min) / 2), labelKey: "mid", kind: "positive" });
       }
       return values;
     }
@@ -45,20 +170,30 @@ export function bvaValuesForField(field: InputField): BvaValue[] {
       const minLength = Number.isFinite(Number(field.min)) ? Number(field.min) : undefined;
       const values: BvaValue[] = [];
       if (field.required) {
-        values.push({ value: "", label: "empty value (invalid for required field)", kind: "negative" });
+        values.push({ value: "", labelKey: "emptyRequired", kind: "negative" });
       }
       if (minLength && minLength > 0) {
         values.push(
-          { value: "a".repeat(minLength), label: `minimum length (${minLength})`, kind: "boundary" },
-          { value: "a".repeat(Math.max(0, minLength - 1)), label: `below minimum length (${minLength - 1}, invalid)`, kind: "negative" }
+          { value: "a".repeat(minLength), labelKey: "minLength", labelArg: minLength, kind: "boundary" },
+          {
+            value: "a".repeat(Math.max(0, minLength - 1)),
+            labelKey: "belowMinLength",
+            labelArg: minLength - 1,
+            kind: "negative",
+          }
         );
       } else {
-        values.push({ value: "a", label: "single character", kind: "boundary" });
+        values.push({ value: "a", labelKey: "singleChar", kind: "boundary" });
       }
       if (maxLength && maxLength > 0) {
         values.push(
-          { value: "a".repeat(maxLength), label: `maximum length (${maxLength})`, kind: "boundary" },
-          { value: "a".repeat(maxLength + 1), label: `above maximum length (${maxLength + 1}, invalid)`, kind: "negative" }
+          { value: "a".repeat(maxLength), labelKey: "maxLength", labelArg: maxLength, kind: "boundary" },
+          {
+            value: "a".repeat(maxLength + 1),
+            labelKey: "aboveMaxLength",
+            labelArg: maxLength + 1,
+            kind: "negative",
+          }
         );
       }
       return values;
@@ -71,10 +206,10 @@ export function bvaValuesForField(field: InputField): BvaValue[] {
       const dayMs = 24 * 60 * 60 * 1000;
       const iso = (d: Date) => d.toISOString().slice(0, 10);
       return [
-        { value: iso(min), label: "earliest allowed date", kind: "boundary" },
-        { value: iso(max), label: "latest allowed date", kind: "boundary" },
-        { value: iso(new Date(min.getTime() - dayMs)), label: "one day before earliest (invalid)", kind: "negative" },
-        { value: iso(new Date(max.getTime() + dayMs)), label: "one day after latest (invalid)", kind: "negative" },
+        { value: iso(min), labelKey: "earliestDate", kind: "boundary" },
+        { value: iso(max), labelKey: "latestDate", kind: "boundary" },
+        { value: iso(new Date(min.getTime() - dayMs)), labelKey: "beforeEarliest", kind: "negative" },
+        { value: iso(new Date(max.getTime() + dayMs)), labelKey: "afterLatest", kind: "negative" },
       ];
     }
 
@@ -82,17 +217,31 @@ export function bvaValuesForField(field: InputField): BvaValue[] {
       const allowed = field.allowedValues ?? [];
       if (allowed.length === 0) return [];
       return [
-        ...allowed.map<BvaValue>((v) => ({ value: v, label: `allowed value "${v}"`, kind: "positive" })),
-        { value: `__INVALID_${field.name.toUpperCase()}__`, label: "value outside the allowed set (invalid)", kind: "negative" },
+        ...allowed.map<BvaValue>((v) => ({
+          value: v,
+          labelKey: "allowedValue" as const,
+          labelArg: v,
+          kind: "positive" as const,
+        })),
+        {
+          value: `__INVALID_${field.name.toUpperCase()}__`,
+          labelKey: "outsideAllowed",
+          kind: "negative",
+        },
       ];
     }
 
     case "bool":
       return [
-        { value: "true", label: "true", kind: "positive" },
-        { value: "false", label: "false", kind: "positive" },
+        { value: "true", labelKey: "boolTrue", kind: "positive" },
+        { value: "false", labelKey: "boolFalse", kind: "positive" },
       ];
   }
+}
+
+/** Resolves a value's label into the requested language. */
+export function bvaLabel(bva: BvaValue, lang: BvaLanguage): string {
+  return COPY[lang].labels[bva.labelKey](bva.labelArg);
 }
 
 /**
@@ -102,11 +251,12 @@ export function bvaValuesForField(field: InputField): BvaValue[] {
  */
 const MAX_INLINE_VALUE_CHARS = 40;
 
-function describeValue(value: string): string {
-  if (value === "") return "(empty)";
+function describeValue(value: string, lang: BvaLanguage): string {
+  const copy = COPY[lang];
+  if (value === "") return copy.empty;
   if (value.length <= MAX_INLINE_VALUE_CHARS) return value;
   const sample = value.slice(0, 12);
-  return `"${sample}…" (${value.length} characters)`;
+  return `"${sample}…" (${copy.charsSuffix(value.length)})`;
 }
 
 function parseDate(v: string | number | undefined): Date | undefined {
@@ -119,8 +269,13 @@ function parseDate(v: string | number | undefined): Date | undefined {
  * Builds one test case per interesting value, continuing the suite's ID
  * numbering from `startIndex` (1-based sequence number of the next case).
  */
-export function synthesizeBvaCases(suite: TestSuite, startIndex: number): TestCase[] {
+export function synthesizeBvaCases(
+  suite: TestSuite,
+  startIndex: number,
+  lang: BvaLanguage = "en"
+): TestCase[] {
   const cases: TestCase[] = [];
+  const copy = COPY[lang];
   let seq = startIndex;
 
   const alreadyCovered = new Set(
@@ -132,32 +287,24 @@ export function synthesizeBvaCases(suite: TestSuite, startIndex: number): TestCa
       if (alreadyCovered.has(`${field.name}=${bva.value}`)) continue;
       alreadyCovered.add(`${field.name}=${bva.value}`);
 
-      const displayValue = describeValue(bva.value);
+      const displayValue = describeValue(bva.value, lang);
+      const label = bvaLabel(bva, lang);
       const invalid = bva.kind === "negative";
       cases.push({
         id: `TC-${String(seq++).padStart(3, "0")}`,
-        title: `BVA: ${field.name} = ${displayValue} (${bva.label})`,
-        objective: `Boundary value analysis for field "${field.name}"`,
+        title: copy.title(field.name, displayValue, label),
+        objective: copy.objective(field.name),
         requirementRef: { requirementId: suite.requirement.id },
-        preconditions: [`${suite.functionName} is reachable and all other inputs are set to known valid values`],
+        preconditions: [copy.precondition(suite.functionName)],
         steps: [
-          {
-            order: 1,
-            action: `Set every input except "${field.name}" to a known valid value`,
-          },
-          {
-            order: 2,
-            action: `Enter "${displayValue}" into the "${field.name}" field`,
-          },
-          {
-            order: 3,
-            action: `Submit the input to ${suite.functionName}`,
-          },
+          { order: 1, action: copy.stepOthersValid(field.name) },
+          { order: 2, action: copy.stepEnter(field.name, displayValue) },
+          { order: 3, action: copy.stepSubmit(suite.functionName) },
         ],
-        testData: [{ field: field.name, value: bva.value, note: bva.label }],
+        testData: [{ field: field.name, value: bva.value, note: label }],
         expectedResult: invalid
-          ? `The value is rejected: a validation error message for "${field.name}" is displayed and processing does not continue`
-          : `The value is accepted: no validation error is displayed for "${field.name}" and processing continues normally`,
+          ? copy.expectedInvalid(field.name)
+          : copy.expectedValid(field.name),
         priority: invalid ? "High" : "Medium",
         type: bva.kind,
         technique: "BVA",

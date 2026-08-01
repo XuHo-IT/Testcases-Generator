@@ -3,28 +3,32 @@
 import type { CaseValidation } from "@/lib/schemas/validation";
 
 const STYLES: Record<CaseValidation["status"], string> = {
-  valid: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
-  repaired: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-  invalid: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
+  valid: "bg-ok-soft text-ok",
+  repaired: "bg-warn-soft text-warn",
+  invalid: "bg-danger-soft text-danger",
 };
 
 const LABELS: Record<CaseValidation["status"], string> = {
-  valid: "Valid",
-  repaired: "Repaired",
-  invalid: "Invalid",
+  valid: "Đạt",
+  repaired: "Đã sửa",
+  invalid: "Lỗi",
 };
 
 export function ValidationBadge({ validation }: { validation?: CaseValidation }) {
   if (!validation) return null;
-  const tooltip = validation.issues.map((i) => `${i.ruleId}: ${i.message}`).join("\n") || "Passes all rules";
+  const tooltip =
+    validation.issues.map((i) => `${i.ruleId}: ${i.message}`).join("\n") || "Đạt toàn bộ rule";
 
   return (
     <span
       title={tooltip}
-      className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium ${STYLES[validation.status]}`}
+      className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium ${STYLES[validation.status]}`}
     >
+      <span aria-hidden className="size-1.5 rounded-full bg-current" />
       {LABELS[validation.status]}
-      {validation.issues.length > 0 && <span className="opacity-70">({validation.issues.length})</span>}
+      {validation.issues.length > 0 && (
+        <span className="tabular opacity-70">{validation.issues.length}</span>
+      )}
     </span>
   );
 }

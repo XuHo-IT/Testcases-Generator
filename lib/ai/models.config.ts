@@ -32,21 +32,21 @@ export const MODEL_CATALOG: ModelEntry[] = [
     label: "Claude Sonnet 5",
     supportsStructured: true,
     recommended: true,
-    notes: "Best speed/quality balance",
+    notes: "Cân bằng tốt nhất giữa tốc độ và chất lượng",
   },
   {
     providerId: "anthropic",
     modelId: "claude-opus-5",
     label: "Claude Opus 5",
     supportsStructured: true,
-    notes: "Highest quality, slower",
+    notes: "Chất lượng cao nhất, chạy chậm hơn",
   },
   {
     providerId: "anthropic",
     modelId: "claude-haiku-4-5",
     label: "Claude Haiku 4.5",
     supportsStructured: true,
-    notes: "Fast and cheap",
+    notes: "Nhanh và rẻ, hợp requirement đơn giản",
   },
 
   // --- OpenAI ---
@@ -71,7 +71,7 @@ export const MODEL_CATALOG: ModelEntry[] = [
     label: "Gemini 2.5 Flash",
     supportsStructured: true,
     recommended: true,
-    notes: "Same model the legacy tool used",
+    notes: "Chính là model bản cũ đang dùng",
   },
   {
     providerId: "google",
@@ -84,26 +84,26 @@ export const MODEL_CATALOG: ModelEntry[] = [
   {
     providerId: "ollama",
     modelId: "llama3.1:8b",
-    label: "Llama 3.1 8B (local)",
+    label: "Llama 3.1 8B (nội bộ)",
     supportsStructured: false,
     recommended: true,
-    notes: "Local/experimental — quality depends on hardware; ≥7B recommended",
+    notes: "Chạy nội bộ, thử nghiệm — chất lượng phụ thuộc máy; nên dùng model từ 7B trở lên",
   },
   {
     providerId: "ollama",
     modelId: "qwen2.5-coder:7b",
-    label: "Qwen 2.5 Coder 7B (local)",
+    label: "Qwen 2.5 Coder 7B (nội bộ)",
     supportsStructured: false,
-    notes: "Local/experimental",
+    notes: "Chạy nội bộ, thử nghiệm — dữ liệu không ra khỏi mạng",
   },
 
   // --- Mock (offline dev/CI) ---
   {
     providerId: "mock",
     modelId: "fixture",
-    label: "Mock (fixtures, offline)",
+    label: "Mock (dữ liệu mẫu, offline)",
     supportsStructured: true,
-    notes: "Returns canned data — no API calls, no cost",
+    notes: "Trả dữ liệu mẫu — không gọi API, không tốn chi phí",
   },
 ];
 
@@ -111,8 +111,8 @@ export const PROVIDER_LABELS: Record<ProviderId, string> = {
   anthropic: "Anthropic Claude",
   openai: "OpenAI",
   google: "Google Gemini",
-  ollama: "Ollama (local)",
-  mock: "Mock",
+  ollama: "Ollama (chạy nội bộ)",
+  mock: "Mock (offline)",
 };
 
 export function findModel(providerId: string, modelId: string): ModelEntry | undefined {

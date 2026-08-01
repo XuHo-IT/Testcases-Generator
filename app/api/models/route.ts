@@ -18,11 +18,11 @@ export async function GET() {
     if (!configured) {
       reason =
         providerId === "mock"
-          ? "Set ENABLE_MOCK_PROVIDER=1 to enable the offline mock provider"
-          : `Set ${PROVIDER_ENV_VARS[providerId as Exclude<ProviderId, "mock">]} in the environment`;
+          ? "Đặt ENABLE_MOCK_PROVIDER=1 để bật provider mock chạy offline"
+          : `Đặt biến môi trường ${PROVIDER_ENV_VARS[providerId as Exclude<ProviderId, "mock">]}`;
     } else if (providerId === "ollama" && !ollamaReachable) {
       available = false;
-      reason = `Ollama did not respond at ${process.env.OLLAMA_BASE_URL} — start it or unset OLLAMA_BASE_URL`;
+      reason = `Không kết nối được Ollama tại ${process.env.OLLAMA_BASE_URL} — hãy khởi động Ollama hoặc bỏ biến OLLAMA_BASE_URL`;
     }
 
     return {
