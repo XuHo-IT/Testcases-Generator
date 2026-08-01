@@ -5,6 +5,15 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 5
+    ignore:
+      # typescript-eslint refuses to run on TypeScript 7, so a major bump breaks
+      # `npm run lint` outright. Drop this once eslint-config-next ships support.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # @types/node must track the oldest Node we support (engines: >=20), not
+      # the newest release, or the types describe APIs that are not there.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       # The AI SDK packages must move together — a core/provider version skew
       # breaks the LanguageModel interface.
