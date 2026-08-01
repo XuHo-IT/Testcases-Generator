@@ -6,9 +6,17 @@ updates:
       interval: monthly
     open-pull-requests-limit: 5
     ignore:
-      # typescript-eslint refuses to run on TypeScript 7, so a major bump breaks
-      # `npm run lint` outright. Drop this once eslint-config-next ships support.
+      # Each of these majors breaks `npm run lint`, and the fix is upstream —
+      # revisit when eslint-config-next ships support, then delete the entry.
+      #
+      # typescript 7: typescript-eslint refuses to run on it.
       - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # eslint 10: removed the context API that eslint-plugin-react still uses
+      # ("contextOrFilename.getFilename is not a function"). The plugin ships
+      # inside eslint-config-next and its latest release still peers on eslint
+      # ^9.7, so there is no version to override to.
+      - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
       # @types/node must track the oldest Node we support (engines: >=20), not
       # the newest release, or the types describe APIs that are not there.
