@@ -1,6 +1,6 @@
 # TestCaseGenerator
 
-[![CI](https://github.com/XuHo-IT/TestcaseGenerator/actions/workflows/ci.yml/badge.svg)](https://github.com/XuHo-IT/TestcaseGenerator/actions/workflows/ci.yml)
+[![CI](https://github.com/XuHo-IT/Testcases-Generator/actions/workflows/ci.yml/badge.svg)](https://github.com/XuHo-IT/Testcases-Generator/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-1F3B63.svg)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-1F3B63.svg)](CONTRIBUTING.md)
 

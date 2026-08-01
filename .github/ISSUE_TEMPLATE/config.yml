@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Lỗi bảo mật
-    url: https://github.com/XuHo-IT/TestcaseGenerator/security/advisories/new
+    url: https://github.com/XuHo-IT/Testcases-Generator/security/advisories/new
     about: Đừng mở issue công khai — báo riêng qua đây.
   - name: Hỏi đáp và thảo luận
-    url: https://github.com/XuHo-IT/TestcaseGenerator/discussions
+    url: https://github.com/XuHo-IT/Testcases-Generator/discussions
     about: Câu hỏi sử dụng, chia sẻ bộ rule, bàn ý tưởng.

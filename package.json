@@ -6,12 +6,12 @@
   "author": "Ngo Tran Xuan Hoa",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/XuHo-IT/TestcaseGenerator.git"
+    "url": "git+https://github.com/XuHo-IT/Testcases-Generator.git"
   },
   "bugs": {
-    "url": "https://github.com/XuHo-IT/TestcaseGenerator/issues"
+    "url": "https://github.com/XuHo-IT/Testcases-Generator/issues"
   },
-  "homepage": "https://github.com/XuHo-IT/TestcaseGenerator#readme",
+  "homepage": "https://github.com/XuHo-IT/Testcases-Generator#readme",
   "keywords": [
     "test-case-generator",
     "istqb",

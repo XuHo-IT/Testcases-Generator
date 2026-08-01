@@ -4,7 +4,7 @@
 
 **Đừng mở issue công khai cho lỗi bảo mật.**
 
-Gửi email tới **ngotranxuanhoa09062004@gmail.com** với tiêu đề bắt đầu bằng `[SECURITY]`, hoặc dùng [GitHub Security Advisory](https://github.com/XuHo-IT/TestcaseGenerator/security/advisories/new) để báo riêng.
+Gửi email tới **ngotranxuanhoa09062004@gmail.com** với tiêu đề bắt đầu bằng `[SECURITY]`, hoặc dùng [GitHub Security Advisory](https://github.com/XuHo-IT/Testcases-Generator/security/advisories/new) để báo riêng.
 
 Trong báo cáo, nếu được, hãy nêu: loại lỗi, file/endpoint liên quan, các bước tái hiện, và mức ảnh hưởng bạn đánh giá. Đây là dự án làm ngoài giờ nên không cam kết thời gian phản hồi cố định, nhưng tôi sẽ trả lời sớm nhất có thể.
 

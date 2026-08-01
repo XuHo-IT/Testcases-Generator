@@ -9,8 +9,8 @@ Bạn không cần xin phép trước cho việc nhỏ (sửa lỗi chính tả,
 Cần Node.js 20 trở lên.
 
 ```bash
-git clone https://github.com/XuHo-IT/TestcaseGenerator.git
-cd TestcaseGenerator
+git clone https://github.com/XuHo-IT/Testcases-Generator.git
+cd Testcases-Generator
 npm install
 cp .env.example .env.local
 ```
