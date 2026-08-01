@@ -26,9 +26,25 @@ npm run dev                    # http://localhost:3000
 Muốn thử ngay mà không tốn credit: đặt `ENABLE_MOCK_PROVIDER=1` rồi chọn model **Mock (fixtures, offline)** — toàn bộ luồng generate → validate → repair → export chạy offline.
 
 ```bash
-npm test          # 85 unit test, không gọi API thật
+npm test          # 110 unit test, không gọi API thật
 npm run build     # kiểm tra type + build production
 ```
+
+## Trang cài đặt (`/cai-dat`)
+
+Mọi thiết lập lưu trong **localStorage của trình duyệt**, không nằm trên máy chủ.
+
+**API key của bạn (BYOK).** Dán key Claude / GPT / Gemini hoặc địa chỉ Ollama, bấm *Kiểm tra kết nối* để biết key chạy được chưa. Key chỉ rời trình duyệt khi bạn thực sự bấm sinh test case, và chỉ gửi key của đúng provider đang chọn. Máy chủ dùng xong là bỏ — không lưu, không ghi log; thông báo lỗi trả về đã được lọc bỏ chuỗi giống API key. Key của bạn **đè** biến môi trường, nên deploy chung cho cả nhóm mà mỗi người vẫn dùng key riêng được.
+
+> localStorage đọc được bởi mọi thứ chạy trong trình duyệt đó — đừng nhập key trên máy dùng chung. Có sẵn nút xóa toàn bộ key.
+
+**Mặc định khi sinh test case.** Nhớ model, ngôn ngữ và tùy chọn case biên cho lần sau.
+
+**14 rule ISTQB.** Xem đầy đủ mã, mức độ, phạm vi và giải thích tiếng Việt của từng rule; bật/tắt rule nào không hợp quy ước của đội.
+
+**Rule riêng.** Chọn trường cần kiểm (tiêu đề, các bước, kết quả mong đợi, dữ liệu test…) + điều kiện (phải chứa / không được chứa / khớp regex / độ dài / số lượng) + thông báo khi vi phạm. Rule đang bật được **đưa luôn vào yêu cầu gửi cho AI** để model tuân thủ ngay từ lần sinh đầu, đồng thời dùng để chấm lại sau khi sinh. Regex giới hạn 200 ký tự và bị chặn ngay lúc nhập nếu không hợp lệ.
+
+Sau khi sửa rule, bấm **Kiểm tra lại theo rule hiện tại** ở trang chủ để chấm lại bộ test case đang có — chạy cục bộ qua `POST /api/validate`, **không gọi AI, không tốn chi phí**.
 
 ## Cấu hình AI model
 
@@ -38,7 +54,7 @@ Toàn bộ danh mục model nằm trong **một file duy nhất**: `lib/ai/model
 { providerId: "anthropic", modelId: "claude-sonnet-5", label: "Claude Sonnet 5", supportsStructured: true }
 ```
 
-Model chỉ hiện trong picker khi provider tương ứng đã cấu hình env var — `GET /api/models` lọc sẵn và probe Ollama trong 1.5 giây. API key chỉ đọc phía server, không bao giờ gửi xuống trình duyệt.
+Model dùng được khi provider đã có env var trên server **hoặc** bạn đã dán key riêng trong `/cai-dat` — provider dùng key riêng hiện nhãn "key của bạn". `GET /api/models` chỉ báo trạng thái env var và probe Ollama trong 1.5 giây, không bao giờ trả key xuống trình duyệt.
 
 | Provider | Env var |
 |---|---|
@@ -87,7 +103,7 @@ Rule R5, R6 và R7 có danh sách cụm từ cho cả tiếng Anh và tiếng Vi
 | Marker ● chỉ đánh được UTCID01 và UTCID02 | Mỗi test case một cột, marker đánh đủ mọi cột |
 | Số test case = số input field | Số case theo số giá trị biên thực tế |
 | min/max kiểu `int` làm hỏng field string | BVA theo từng kiểu: int, decimal, string (theo độ dài), date, enum, bool |
-| Test suite không build được | 85 test chạy sạch với mock provider |
+| Test suite không build được | 110 test chạy sạch với mock provider |
 | Chỉ export được Excel | 6 định dạng, cộng Use Case Report |
 
 ## Triển khai
@@ -106,18 +122,22 @@ docker compose exec ollama ollama pull llama3.1:8b
 
 ```
 app/
-  page.tsx                     UI một trang
-  api/{generate,generate-use-case-report,parse-file,export,models}/route.ts
+  layout.tsx                   khung chung: header + nav + SettingsProvider + footer
+  page.tsx                     trang sinh test case
+  cai-dat/page.tsx             trang cài đặt
+  api/{generate,generate-use-case-report,parse-file,export,models,validate,test-connection}/route.ts
 lib/
-  schemas/     zod — nguồn chân lý cho AI output, validation và TS types
-  ai/          models.config.ts (catalog) · registry.ts · mock-provider.ts · retry.ts · fixtures.ts
+  schemas/     zod — nguồn chân lý cho AI output, validation, custom rule và TS types
+  settings/    schema.ts · storage.ts · store.ts (localStorage qua useSyncExternalStore)
+  ai/          models.config.ts (catalog) · registry.ts · mock-provider.ts · retry.ts · redact.ts
   prompts/     test-suite · use-case-report · repair · fragments (en/vi)
   inputs/      normalize.ts + parsers/ (docx, pdf, openapi)
   generation/  pipeline.ts · bva.ts
-  validation/  engine.ts · rules.ts · vague-phrases.ts
+  validation/  engine.ts · rules.ts · rule-catalog.ts · custom-rules.ts · vague-phrases.ts
   export/      excel-istqb · excel-utcid · excel-usecase · text-formats · index.ts
 components/    GeneratorForm · ModelPicker · TestCasePreviewTable · ValidationBadge · ExportMenu
-tests/         85 unit test (validation, BVA, export, inputs, pipeline)
+               SettingsProvider · SiteNav · settings/ (4 section)
+tests/         110 unit test (validation, custom rules, settings, BVA, export, inputs, pipeline)
 ```
 
 ## Giao diện

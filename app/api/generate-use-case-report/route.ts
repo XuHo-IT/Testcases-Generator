@@ -2,6 +2,8 @@ import { z } from "zod";
 import { LANGUAGES } from "@/lib/schemas/test-case";
 import { generateUseCaseReport } from "@/lib/generation/pipeline";
 import { ProviderNotConfiguredError } from "@/lib/ai/registry";
+import { errorMessage } from "@/lib/ai/redact";
+import { credentialsSchema } from "@/lib/schemas/generation";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -12,6 +14,7 @@ const bodySchema = z.object({
   providerId: z.string().min(1),
   modelId: z.string().min(1),
   language: z.enum(LANGUAGES).default("auto"),
+  credentials: credentialsSchema.optional(),
 });
 
 export async function POST(request: Request) {
@@ -37,8 +40,7 @@ export async function POST(request: Request) {
     if (error instanceof ProviderNotConfiguredError) {
       return Response.json({ error: error.message }, { status: 400 });
     }
-    const message = error instanceof Error ? error.message : "Generation failed";
-    console.error("[generate-use-case-report]", error);
-    return Response.json({ error: message }, { status: 502 });
+    console.error("[generate-use-case-report]", errorMessage(error, "Generation failed"));
+    return Response.json({ error: errorMessage(error, "Sinh báo cáo thất bại") }, { status: 502 });
   }
 }

@@ -1,5 +1,6 @@
 import { TEST_CASE_ID_PATTERN, PRIORITIES, CASE_TYPES, type TestCase, type TestSuite } from "@/lib/schemas/test-case";
 import type { ValidationIssue } from "@/lib/schemas/validation";
+import { RULE_META_BY_ID, type RuleScope, type RuleSeverity } from "./rule-catalog";
 import {
   DATA_ENTRY_HINTS,
   OBSERVABLE_HINTS,
@@ -17,6 +18,20 @@ import {
 export interface Rule {
   id: string;
   run(suite: TestSuite): ValidationIssue[];
+  /** Display metadata — built-in rules take theirs from RULE_META_BY_ID. */
+  title?: string;
+  description?: string;
+  severity?: RuleSeverity;
+  scope?: RuleScope;
+  isCustom?: boolean;
+}
+
+/** Attaches catalogue metadata so every rule can describe itself to the UI. */
+function described(rule: Rule): Rule {
+  const meta = RULE_META_BY_ID[rule.id];
+  return meta
+    ? { ...rule, title: meta.title, description: meta.description, severity: meta.severity, scope: meta.scope }
+    : rule;
 }
 
 const issue = (
@@ -399,4 +414,4 @@ export const ALL_RULES: Rule[] = [
   r12CoverageBoundary,
   r13AcCoverage,
   r14NearDup,
-];
+].map(described);

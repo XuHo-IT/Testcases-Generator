@@ -1,10 +1,28 @@
 import type { TestSuite } from "@/lib/schemas/test-case";
+import type { CustomRule } from "@/lib/schemas/custom-rule";
 import type { CaseValidation, ValidationIssue, ValidationReport } from "@/lib/schemas/validation";
-import { ALL_RULES } from "./rules";
+import { ALL_RULES, type Rule } from "./rules";
+import { compileCustomRules } from "./custom-rules";
 
-/** Runs all rules and aggregates a ValidationReport. Pure and synchronous. */
-export function validateSuite(suite: TestSuite, repairedIds: ReadonlySet<string> = new Set()): ValidationReport {
-  const issues: ValidationIssue[] = ALL_RULES.flatMap((rule) => rule.run(suite));
+export interface ValidateOptions {
+  /** Cases repaired earlier in the pipeline — reported as "repaired" once they pass. */
+  repairedIds?: ReadonlySet<string>;
+  /** User-defined rules, evaluated alongside the built-in ones. */
+  customRules?: readonly CustomRule[];
+  /** Built-in rule ids the user switched off in settings. */
+  disabledRuleIds?: readonly string[];
+}
+
+/** The rules that will actually run for a given set of options. */
+export function activeRules(options: ValidateOptions = {}): Rule[] {
+  const disabled = new Set(options.disabledRuleIds ?? []);
+  return [...ALL_RULES.filter((r) => !disabled.has(r.id)), ...compileCustomRules(options.customRules)];
+}
+
+/** Runs all active rules and aggregates a ValidationReport. Pure and synchronous. */
+export function validateSuite(suite: TestSuite, options: ValidateOptions = {}): ValidationReport {
+  const repairedIds = options.repairedIds ?? new Set<string>();
+  const issues: ValidationIssue[] = activeRules(options).flatMap((rule) => rule.run(suite));
 
   const perCase: CaseValidation[] = suite.testCases.map((tc) => {
     const caseIssues = issues.filter((i) => i.testCaseId === tc.id);

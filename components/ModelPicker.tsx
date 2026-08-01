@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { ModelEntry, ProviderId } from "@/lib/ai/models.config";
+import { useSettings } from "./SettingsProvider";
 
 export interface ProviderGroup {
   providerId: ProviderId;
@@ -22,6 +24,7 @@ interface Props {
 }
 
 export function ModelPicker({ value, onChange }: Props) {
+  const { hasCredentials, hydrated } = useSettings();
   const [groups, setGroups] = useState<ProviderGroup[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,21 +35,25 @@ export function ModelPicker({ value, onChange }: Props) {
       .then((data: { providers: ProviderGroup[] }) => {
         if (cancelled) return;
         setGroups(data.providers);
-        if (!value) {
-          const firstAvailable = data.providers.find((g) => g.available && g.models.length > 0);
-          const model = firstAvailable?.models.find((m) => m.recommended) ?? firstAvailable?.models[0];
-          if (firstAvailable && model) {
-            onChange({ providerId: firstAvailable.providerId, modelId: model.modelId });
-          }
-        }
       })
       .catch(() => !cancelled && setError("Không tải được danh sách model"));
     return () => {
       cancelled = true;
     };
-    // Chạy một lần — catalog cố định theo deployment.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Auto-select only once settings are known, otherwise a provider the user has
+  // a key for would be skipped in favour of an env-configured one.
+  useEffect(() => {
+    if (!groups || value || !hydrated) return;
+    const firstUsable = groups.find(
+      (g) => (g.available || hasCredentials(g.providerId)) && g.models.length > 0
+    );
+    const model = firstUsable?.models.find((m) => m.recommended) ?? firstUsable?.models[0];
+    if (firstUsable && model) {
+      onChange({ providerId: firstUsable.providerId, modelId: model.modelId });
+    }
+  }, [groups, value, hydrated, hasCredentials, onChange]);
 
   if (error) {
     return (
@@ -67,9 +74,12 @@ export function ModelPicker({ value, onChange }: Props) {
     );
   }
 
-  const anyAvailable = groups.some((g) => g.available && g.models.length > 0);
+  // A provider is usable when the deployment configured it OR the user pasted
+  // their own key in Cài đặt.
+  const usable = (g: ProviderGroup) => g.available || hasCredentials(g.providerId);
+  const anyAvailable = groups.some((g) => usable(g) && g.models.length > 0);
   const selectValue = value ? `${value.providerId}::${value.modelId}` : "";
-  const unavailable = groups.filter((g) => !g.available && g.reason);
+  const unavailable = groups.filter((g) => !usable(g) && g.reason);
   const activeNotes = groups
     .flatMap((g) => g.models)
     .find((m) => m.providerId === value?.providerId && m.modelId === value?.modelId)?.notes;
@@ -92,13 +102,19 @@ export function ModelPicker({ value, onChange }: Props) {
         {groups.map((group) => (
           <optgroup
             key={group.providerId}
-            label={group.available ? group.label : `${group.label} — chưa sẵn sàng`}
+            label={
+              usable(group)
+                ? hasCredentials(group.providerId) && !group.available
+                  ? `${group.label} — key của bạn`
+                  : group.label
+                : `${group.label} — chưa sẵn sàng`
+            }
           >
             {group.models.map((model) => (
               <option
                 key={model.modelId}
                 value={`${group.providerId}::${model.modelId}`}
-                disabled={!group.available}
+                disabled={!usable(group)}
               >
                 {model.label}
                 {model.recommended ? " · khuyến nghị" : ""}
@@ -121,6 +137,12 @@ export function ModelPicker({ value, onChange }: Props) {
                 <span className="text-ink">{g.label}:</span> {g.reason}
               </li>
             ))}
+            <li className="hint">
+              <Link href="/cai-dat" className="text-accent underline underline-offset-2">
+                Nhập API key của bạn trong Cài đặt
+              </Link>{" "}
+              để dùng provider mà không cần biến môi trường.
+            </li>
           </ul>
         </details>
       )}

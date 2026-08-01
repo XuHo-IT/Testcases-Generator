@@ -19,7 +19,7 @@ import type { GenerateRequest, NormalizedInput } from "@/lib/schemas/generation"
 import type { Language } from "@/lib/schemas/test-case";
 import type { ValidationReport } from "@/lib/schemas/validation";
 import { normalizeInput } from "@/lib/inputs/normalize";
-import { getModel } from "@/lib/ai/registry";
+import { getModel, type ProviderCredentials } from "@/lib/ai/registry";
 import { withRetry } from "@/lib/ai/retry";
 import { buildTestSuitePrompt } from "@/lib/prompts/test-suite";
 import { buildRepairPrompt } from "@/lib/prompts/repair";
@@ -47,8 +47,14 @@ export interface GenerationResult {
 
 export async function generateTestSuite(request: GenerateRequest): Promise<GenerationResult> {
   const normalized = normalizeInput(request.input);
-  const model = getModel(request.providerId, request.modelId);
-  const prompt = buildTestSuitePrompt(normalized, request.options);
+  const model = getModel(request.providerId, request.modelId, request.credentials);
+  const prompt = buildTestSuitePrompt(normalized, request.options, request.customRules);
+
+  // Rule settings apply to every validation pass in this run.
+  const ruleOptions = {
+    customRules: request.customRules,
+    disabledRuleIds: request.disabledRuleIds,
+  };
 
   const { object } = await withRetry(() =>
     generateObject({ model, schema: generatedSuiteSchema, prompt })
@@ -70,24 +76,24 @@ export async function generateTestSuite(request: GenerateRequest): Promise<Gener
   }
 
   const repairedIds = new Set<string>();
-  let report = validateSuite(suite);
+  let report = validateSuite(suite, ruleOptions);
 
   if (invalidCaseIds(report).length > 0) {
     suite = applyDeterministicRepairs(suite, report, repairedIds);
-    report = validateSuite(suite);
+    report = validateSuite(suite, ruleOptions);
   }
 
   const stillInvalid = invalidCaseIds(report);
   if (stillInvalid.length > 0) {
     suite = await aiRepairPass(suite, report, model, repairedIds);
-    report = validateSuite(suite);
+    report = validateSuite(suite, ruleOptions);
   }
 
   // "repaired" only counts for cases that actually ended up valid.
-  const finalReport = validateSuite(
-    suite,
-    new Set([...repairedIds].filter((id) => !invalidCaseIds(report).includes(id)))
-  );
+  const finalReport = validateSuite(suite, {
+    ...ruleOptions,
+    repairedIds: new Set([...repairedIds].filter((id) => !invalidCaseIds(report).includes(id))),
+  });
 
   return { suite, validation: finalReport, warnings: normalized.warnings };
 }
@@ -98,8 +104,9 @@ export async function generateUseCaseReport(params: {
   providerId: string;
   modelId: string;
   language: Language;
+  credentials?: ProviderCredentials;
 }): Promise<UseCaseReport> {
-  const model = getModel(params.providerId, params.modelId);
+  const model = getModel(params.providerId, params.modelId, params.credentials);
   const prompt = buildUseCaseReportPrompt(params.useCaseName, params.additionalContext, params.language);
   const { object } = await withRetry(() =>
     generateObject({ model, schema: generatedUseCaseReportSchema, prompt })

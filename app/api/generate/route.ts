@@ -1,6 +1,7 @@
 import { generateRequestSchema } from "@/lib/schemas/generation";
 import { generateTestSuite } from "@/lib/generation/pipeline";
 import { ProviderNotConfiguredError } from "@/lib/ai/registry";
+import { errorMessage } from "@/lib/ai/redact";
 
 export const runtime = "nodejs";
 // Generation with thinking models can take minutes (Vercel Pro/fluid needed
@@ -30,8 +31,8 @@ export async function POST(request: Request) {
     if (error instanceof ProviderNotConfiguredError) {
       return Response.json({ error: error.message }, { status: 400 });
     }
-    const message = error instanceof Error ? error.message : "Generation failed";
-    console.error("[generate]", error);
-    return Response.json({ error: message }, { status: 502 });
+    // Log the error only — never the request body, which carries the user's key.
+    console.error("[generate]", errorMessage(error, "Generation failed"));
+    return Response.json({ error: errorMessage(error, "Sinh test case thất bại") }, { status: 502 });
   }
 }

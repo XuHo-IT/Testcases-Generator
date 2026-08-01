@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { useSettings } from "./SettingsProvider";
 import type { GenerateInput } from "@/lib/schemas/generation";
 import type { Language, TestSuite } from "@/lib/schemas/test-case";
 import type { ValidationReport } from "@/lib/schemas/validation";
@@ -20,10 +22,23 @@ const TABS: { id: TabId; label: string; hint: string }[] = [
 const EXAMPLES = ["Đăng nhập người dùng", "Kiểm tra độ tuổi", "Xử lý thanh toán", "Kiểm tra email"];
 
 export function GeneratorForm() {
+  const { settings, credentialsFor } = useSettings();
+
   const [tab, setTab] = useState<TabId>("freeText");
-  const [model, setModel] = useState<ModelSelection | null>(null);
-  const [language, setLanguage] = useState<Language>("auto");
-  const [includeBva, setIncludeBva] = useState(true);
+
+  // Controls fall back to the saved defaults until the user overrides them, so
+  // there is nothing to copy into state when settings finish loading.
+  const [modelOverride, setModelOverride] = useState<ModelSelection | null>(null);
+  const [languageOverride, setLanguageOverride] = useState<Language | null>(null);
+  const [includeBvaOverride, setIncludeBvaOverride] = useState<boolean | null>(null);
+
+  const savedModel: ModelSelection | null =
+    settings.defaults.providerId && settings.defaults.modelId
+      ? { providerId: settings.defaults.providerId, modelId: settings.defaults.modelId }
+      : null;
+  const model = modelOverride ?? savedModel;
+  const language = languageOverride ?? settings.defaults.language;
+  const includeBva = includeBvaOverride ?? settings.defaults.includeBva;
 
   // State theo từng tab
   const [useCaseName, setUseCaseName] = useState("");
@@ -40,6 +55,7 @@ export function GeneratorForm() {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [result, setResult] = useState<{ suite: TestSuite; validation: ValidationReport } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [revalidating, setRevalidating] = useState(false);
 
   async function uploadFile(file: File, target: "document" | "apiSpec") {
     setError(null);
@@ -112,6 +128,10 @@ export function GeneratorForm() {
           providerId: model.providerId,
           modelId: model.modelId,
           options: { language, includeBva },
+          // Only the key for the provider actually being used leaves the browser.
+          credentials: credentialsFor(model.providerId),
+          customRules: settings.customRules,
+          disabledRuleIds: settings.disabledRuleIds,
         }),
       });
       const data = await res.json();
@@ -124,6 +144,31 @@ export function GeneratorForm() {
       setStatus(null);
     } finally {
       setBusy(false);
+    }
+  }
+
+  /** Re-scores the suite already on screen against the current rules — no AI call. */
+  async function revalidate() {
+    if (!result) return;
+    setRevalidating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          suite: result.suite,
+          customRules: settings.customRules,
+          disabledRuleIds: settings.disabledRuleIds,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Kiểm tra lại thất bại");
+      setResult({ suite: result.suite, validation: data.validation });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Kiểm tra lại thất bại");
+    } finally {
+      setRevalidating(false);
     }
   }
 
@@ -301,7 +346,12 @@ export function GeneratorForm() {
       </div>
 
       <div className="card grid gap-5 p-5 sm:grid-cols-3">
-        <ModelPicker value={model} onChange={setModel} />
+        <ModelPicker
+          value={model}
+          onChange={(selection) => {
+            setModelOverride(selection);
+          }}
+        />
 
         <div>
           <label htmlFor="lang" className="label">
@@ -310,7 +360,9 @@ export function GeneratorForm() {
           <select
             id="lang"
             value={language}
-            onChange={(e) => setLanguage(e.target.value as Language)}
+            onChange={(e) => {
+              setLanguageOverride(e.target.value as Language);
+            }}
             className="field"
           >
             <option value="auto">Tự động theo requirement</option>
@@ -325,7 +377,9 @@ export function GeneratorForm() {
             <input
               type="checkbox"
               checked={includeBva}
-              onChange={(e) => setIncludeBva(e.target.checked)}
+              onChange={(e) => {
+                setIncludeBvaOverride(e.target.checked);
+              }}
               className="mt-0.5 accent-[var(--accent)]"
             />
             <span>
@@ -372,6 +426,24 @@ export function GeneratorForm() {
 
       {result && (
         <div className="space-y-8">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={revalidate}
+              disabled={revalidating}
+              className="btn btn-secondary"
+            >
+              {revalidating ? "Đang kiểm tra lại…" : "Kiểm tra lại theo rule hiện tại"}
+            </button>
+            <span className="hint">
+              Chấm lại bộ test case đang có sau khi bạn sửa rule trong{" "}
+              <Link href="/cai-dat" className="text-accent underline underline-offset-2">
+                Cài đặt
+              </Link>{" "}
+              — không gọi AI, không tốn chi phí.
+            </span>
+          </div>
+
           <TestCasePreviewTable suite={result.suite} validation={result.validation} />
           <ExportMenu suite={result.suite} validation={result.validation} />
         </div>

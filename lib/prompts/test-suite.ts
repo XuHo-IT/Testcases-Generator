@@ -1,5 +1,6 @@
 import type { GenerateOptions, NormalizedInput } from "@/lib/schemas/generation";
 import { SOURCE_TYPE_LABELS } from "@/lib/schemas/generation";
+import { RULE_TARGET_LABELS, type CustomRule } from "@/lib/schemas/custom-rule";
 import { languageDirective, QUALITY_DIRECTIVES } from "./fragments";
 
 /**
@@ -8,7 +9,11 @@ import { languageDirective, QUALITY_DIRECTIVES } from "./fragments";
  * GeminiService.cs) — structure is enforced by generateObject, so the JSON
  * skeleton and "Return ONLY the JSON" plumbing are gone.
  */
-export function buildTestSuitePrompt(input: NormalizedInput, options: GenerateOptions): string {
+export function buildTestSuitePrompt(
+  input: NormalizedInput,
+  options: GenerateOptions,
+  customRules: readonly CustomRule[] = []
+): string {
   const sections: string[] = [];
 
   sections.push(
@@ -35,6 +40,18 @@ export function buildTestSuitePrompt(input: NormalizedInput, options: GenerateOp
     ? `Generate about ${options.caseCountHint} test cases.`
     : "Generate as many test cases as the requirement genuinely needs for solid coverage (typically 5-12).";
   sections.push(`## Test case design\n${countHint}\n\n${QUALITY_DIRECTIVES}`);
+
+  // Stating the team's own rules up front is cheaper than letting the repair
+  // pass fix violations afterwards.
+  const enabled = customRules.filter((r) => r.enabled);
+  if (enabled.length > 0) {
+    const list = enabled
+      .map((r) => `- ${r.name} (${RULE_TARGET_LABELS[r.target]}): ${r.message}`)
+      .join("\n");
+    sections.push(
+      `## Additional team-specific rules\nEvery test case must also satisfy these rules defined by the QA team:\n${list}`
+    );
+  }
 
   sections.push(languageDirective(options.language));
 

@@ -227,7 +227,7 @@ describe("engine aggregation", () => {
   });
 
   it("marks a case repaired when it passes and was repaired", () => {
-    const report = validateSuite(makeSuite(), new Set(["TC-001"]));
+    const report = validateSuite(makeSuite(), { repairedIds: new Set(["TC-001"]) });
     expect(report.perCase.find((c) => c.testCaseId === "TC-001")!.status).toBe("repaired");
   });
 

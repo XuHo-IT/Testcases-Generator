@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { LANGUAGES, SOURCE_TYPES, type AcceptanceCriterion, type SourceType } from "./test-case";
+import { customRulesSchema } from "./custom-rule";
 
 /** Request/normalization shapes for the generation API. */
 
@@ -33,11 +34,23 @@ export const generateInputSchema = z.discriminatedUnion("sourceType", [
   }),
 ]);
 
+/**
+ * Credentials for the provider being used on THIS request only. The client
+ * sends just the one key it needs, the server uses it and drops it.
+ */
+export const credentialsSchema = z.object({
+  apiKey: z.string().max(400).optional(),
+  baseUrl: z.string().max(400).optional(),
+});
+
 export const generateRequestSchema = z.object({
   input: generateInputSchema,
   providerId: z.string().min(1),
   modelId: z.string().min(1),
   options: generateOptionsSchema.default({ language: "auto", includeBva: true }),
+  credentials: credentialsSchema.optional(),
+  customRules: customRulesSchema.default([]),
+  disabledRuleIds: z.array(z.string()).max(50).default([]),
 });
 
 export type GenerateOptions = z.infer<typeof generateOptionsSchema>;

@@ -30,7 +30,21 @@ export function isProviderConfigured(providerId: ProviderId): boolean {
   return Boolean(process.env[PROVIDER_ENV_VARS[providerId]]);
 }
 
-export function getModel(providerId: string, modelId: string): LanguageModel {
+/**
+ * Credentials supplied by the user for this request (BYOK). They are used for
+ * the single call and never persisted, logged or echoed back.
+ */
+export interface ProviderCredentials {
+  apiKey?: string;
+  /** Ollama only — where the local server lives. */
+  baseUrl?: string;
+}
+
+export function getModel(
+  providerId: string,
+  modelId: string,
+  credentials?: ProviderCredentials
+): LanguageModel {
   const entry = findModel(providerId, modelId);
   if (!entry) {
     throw new ProviderNotConfiguredError(
@@ -40,39 +54,46 @@ export function getModel(providerId: string, modelId: string): LanguageModel {
   }
 
   switch (entry.providerId) {
-    case "anthropic": {
-      requireEnv("anthropic");
-      return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })(modelId);
-    }
-    case "openai": {
-      requireEnv("openai");
-      return createOpenAI({ apiKey: process.env.OPENAI_API_KEY })(modelId);
-    }
-    case "google": {
-      requireEnv("google");
-      return createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY })(modelId);
-    }
+    case "anthropic":
+      return createAnthropic({ apiKey: resolveKey("anthropic", credentials) })(modelId);
+    case "openai":
+      return createOpenAI({ apiKey: resolveKey("openai", credentials) })(modelId);
+    case "google":
+      return createGoogleGenerativeAI({ apiKey: resolveKey("google", credentials) })(modelId);
     case "ollama": {
-      requireEnv("ollama");
-      const baseURL = `${process.env.OLLAMA_BASE_URL!.replace(/\/$/, "")}/v1`;
+      const base = credentials?.baseUrl?.trim() || process.env.OLLAMA_BASE_URL;
+      if (!base) {
+        throw new ProviderNotConfiguredError(
+          "ollama",
+          "chưa có địa chỉ Ollama — nhập trong Cài đặt hoặc đặt biến môi trường OLLAMA_BASE_URL"
+        );
+      }
       // Ollama exposes an OpenAI-compatible endpoint at /v1 (JSON-schema
       // constrained output included).
-      return createOpenAICompatible({ name: "ollama", baseURL })(modelId);
+      return createOpenAICompatible({ name: "ollama", baseURL: `${base.replace(/\/$/, "")}/v1` })(modelId);
     }
     case "mock": {
       if (process.env.ENABLE_MOCK_PROVIDER !== "1") {
-        throw new ProviderNotConfiguredError("mock", "set ENABLE_MOCK_PROVIDER=1 to use it");
+        throw new ProviderNotConfiguredError("mock", "đặt ENABLE_MOCK_PROVIDER=1 để dùng provider mock");
       }
       return createMockModel();
     }
   }
 }
 
-function requireEnv(providerId: Exclude<ProviderId, "mock">): void {
-  const envVar = PROVIDER_ENV_VARS[providerId];
-  if (!process.env[envVar]) {
-    throw new ProviderNotConfiguredError(providerId, `missing env var ${envVar}`);
+/** A key pasted by the user wins over the deployment-wide env var. */
+function resolveKey(
+  providerId: Exclude<ProviderId, "mock" | "ollama">,
+  credentials?: ProviderCredentials
+): string {
+  const key = credentials?.apiKey?.trim() || process.env[PROVIDER_ENV_VARS[providerId]];
+  if (!key) {
+    throw new ProviderNotConfiguredError(
+      providerId,
+      `chưa có API key — nhập trong Cài đặt hoặc đặt biến môi trường ${PROVIDER_ENV_VARS[providerId]}`
+    );
   }
+  return key;
 }
 
 /** 1.5s probe of the Ollama server so the picker can grey it out when down. */
