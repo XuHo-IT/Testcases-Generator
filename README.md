@@ -97,21 +97,6 @@ Case còn lỗi sau repair **vẫn nằm trong suite** với badge đỏ và c�
 
 Rule R5, R6 và R7 có danh sách cụm từ cho cả tiếng Anh và tiếng Việt (`lib/validation/vague-phrases.ts`).
 
-## Điểm khác biệt so với hai repo cũ
-
-| Vấn đề cũ | Xử lý ở repo này |
-|---|---|
-| API key Gemini bị commit công khai | Chỉ commit `.env.example`; `.gitignore` chặn mọi `.env*` khác; key người dùng nằm trong trình duyệt, không đưa lên máy chủ. Key từng bị lộ ở repo cũ cần được thu hồi ở phía Google |
-| Chỉ hỗ trợ Gemini, model dính liền URL | 4 provider + mock, catalog gói trong 1 file, key chỉ ở phía server |
-| Parse JSON bằng cách "cạo" giữa `{...}` | `generateObject` + zod schema — loại bỏ hẳn lớp bug này |
-| Không có validation nào | 14 rule ISTQB + repair pass |
-| Excel bịa Passed/Failed, Defect ID random, ngày = `DateTime.Now` | Các ô này **để trống** cho tester điền; summary báo Untested = tổng số case |
-| Marker ● chỉ đánh được UTCID01 và UTCID02 | Mỗi test case một cột, marker đánh đủ mọi cột |
-| Số test case = số input field | Số case theo số giá trị biên thực tế |
-| min/max kiểu `int` làm hỏng field string | BVA theo từng kiểu: int, decimal, string (theo độ dài), date, enum, bool |
-| Test suite không build được | 110 test chạy sạch với mock provider |
-| Chỉ export được Excel | 6 định dạng, cộng Use Case Report |
-
 ## Triển khai
 
 **Vercel (cloud):** deploy thẳng, set các env var cần dùng. Route generate đặt `maxDuration = 300` (cần Pro/fluid compute; gói Hobby giới hạn thấp hơn). Ollama không dùng được trên Vercel — picker tự ẩn.
@@ -145,17 +130,6 @@ components/    GeneratorForm · ModelPicker · TestCasePreviewTable · Validatio
                SettingsProvider · SiteNav · settings/ (4 section)
 tests/         110 unit test (validation, custom rules, settings, BVA, export, inputs, pipeline)
 ```
-
-## Giao diện
-
-Bảng màu học thuật, một màu nhấn duy nhất là **navy đậm (`#1F3B63`)** trên nền bone ấm (`#F7F6F3`) — dễ đọc khi ngồi review lâu, không gradient, không màu chói. Có dark mode tự động theo hệ điều hành.
-
-- Chữ hiển thị: **Lora** (serif) cho tiêu đề, **Be Vietnam Pro** cho nội dung — hỗ trợ đầy đủ dấu tiếng Việt.
-- Số liệu và mã test case dùng font monospace, bật `tabular-nums` để các cột thẳng hàng.
-- Đủ trạng thái: hover, active, focus ring cho bàn phím, skeleton khi đang sinh, và màn hình rỗng có hướng dẫn.
-- Tôn trọng `prefers-reduced-motion`; có link "bỏ qua đến nội dung chính" cho người dùng bàn phím.
-
-Toàn bộ token màu nằm ở đầu `app/globals.css` — đổi màu chủ đạo của trường chỉ cần sửa biến `--accent`.
 
 ## Lưu ý khi vận hành
 
