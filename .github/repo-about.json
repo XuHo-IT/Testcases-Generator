@@ -1,0 +1,18 @@
+{
+  "_comment": "Ô About của repo — mô tả, website, topics. GitHub lưu những thứ này dưới dạng repo settings chứ không phải file, nên trong git không có gì ghi lại chúng đáng lẽ phải là gì; file này ghi. Áp dụng bằng: node .github/apply-about.mjs --apply (cần `gh` đã đăng nhập).",
+
+  "description": "Sinh test case chuẩn ISTQB cho tester từ requirement, user story, tài liệu hoặc API spec — hỗ trợ Claude, GPT, Gemini và Ollama chạy nội bộ.",
+
+  "homepage": "https://testcases-generator.vercel.app",
+
+  "topics": [
+    "test-case-generator",
+    "istqb",
+    "software-testing",
+    "qa",
+    "test-automation",
+    "ai",
+    "nextjs",
+    "vercel-ai-sdk"
+  ]
+}

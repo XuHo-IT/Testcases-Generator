@@ -80,6 +80,18 @@ Vitest chạy trong môi trường **node**, không có jsdom — nên hiện ch
 
 Test không được gọi mạng thật. Provider mock (`lib/ai/mock-provider.ts`) và fixture (`lib/ai/fixtures.ts`) là chỗ để mô phỏng phản hồi AI.
 
+## Cấu hình repo cũng nằm trong repo
+
+Ô About và branch protection của `main` là **settings** của GitHub chứ không phải file, nên bình thường git không ghi lại chúng đáng lẽ phải là gì — và một lần reset, chuyển chủ sở hữu hay fork là mất sạch mà không có diff nào cho thấy đã mất gì. Hai script không phụ thuộc gì ngoài `gh` giữ chúng lại ở đây:
+
+```bash
+node .github/apply-about.mjs               # chạy thử: hiện tại vs mong muốn
+node .github/apply-about.mjs --apply
+node .github/apply-protection.mjs --apply
+```
+
+Cả hai cần GitHub CLI đã đăng nhập với scope `repo`, và chỉ maintainer mới dùng tới. Nếu bạn đổi `name:` của job hoặc đổi ma trận Node trong `ci.yml`, hãy sửa luôn danh sách `contexts` trong `apply-protection.mjs` trong cùng PR — job bị đổi tên sẽ **âm thầm** thôi là check bắt buộc.
+
 ## Báo lỗi bảo mật
 
 Đừng mở issue công khai — xem [SECURITY.md](SECURITY.md).
