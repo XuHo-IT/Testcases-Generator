@@ -45,7 +45,7 @@
     "react-dom": "19.2.8",
     "unpdf": "^1.8.0",
     "yaml": "^2.9.0",
-    "zod": "^4.4.3"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
